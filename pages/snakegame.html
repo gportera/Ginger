@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=<!doctype html>
+<!--
+  Snake Duel - Single-file Web App
+  Player vs Computer snake. Keeps score across rounds. Responsive and keyboard + touch controls.
+  Controls: Arrow keys or WASD. On-screen buttons for mobile.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Snake Duel — Play vs Computer</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --panel:#0b1220;
+    --accent:#8b5cf6;
+    --accent-2:#06b6d4;
+    --muted:#94a3b8;
+    --success:#10b981;
+    --danger:#ef4444;
+    --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071023 120%);color:#e6eef8;font-family:var(--font-sans);}
+  .app{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:28px;
+    align-items:center;
+    padding:36px;
+    max-width:1200px;
+    margin:0 auto;
+  }
+
+  /* Left control panel */
+  .panel{
+    background:linear-gradient(180deg,var(--panel),#071325);
+    border-radius:var(--radius);
+    padding:18px;
+    box-shadow:0 6px 30px rgba(2,6,23,0.6);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .brand{
+    display:flex;gap:12px;align-items:center;
+  }
+  .logo{
+    width:56px;height:56px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:grid;place-items:center;font-weight:700;
+    box-shadow:0 6px 18px rgba(139,92,246,0.22), inset 0 -6px 18px rgba(0,0,0,0.2);
+    color:white;font-size:20px;
+  }
+  h1{font-size:20px;margin:0}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+
+  .scoreboard{
+    display:flex;gap:10px;align-items:stretch;
+    margin-top:6px;
+  }
+  .score{
+    background:var(--glass);padding:10px;border-radius:10px;flex:1;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .score .label{font-size:12px;color:var(--muted)}
+  .score .value{font-size:22px;font-weight:700}
+
+  .controls{
+    display:flex;gap:8px;margin-top:6px;
+  }
+  .btn{
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.04);
+    padding:10px 12px;border-radius:10px;color:inherit;
+    cursor:pointer;font-weight:600;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn.primary{
+    background: linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:white;border:none;box-shadow:0 8px 30px rgba(99,102,241,0.18);
+  }
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+  .small{font-size:13px;padding:8px 10px}
+
+  .settings{margin-top:8px;background:rgba(255,255,255,0.02);padding:12px;border-radius:10px}
+  label{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+  select,input[type="range"]{width:100%}
+  .muted{font-size:12px;color:var(--muted)}
+
+  /* Right area: game canvas */
+  .stage{
+    display:flex;flex-direction:column;gap:10px;align-items:center;
+  }
+  .canvas-wrap{
+    background:linear-gradient(180deg,#071428, #071325);
+    padding:18px;border-radius:20px;box-shadow:0 20px 50px rgba(2,6,23,0.7);
+    display:flex;flex-direction:column;align-items:center;
+  }
+  canvas{background:linear-gradient(180deg,#081425,#061224);border-radius:8px;display:block}
+  .hud{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .hud .stat{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:10px;font-weight:600}
+
+  /* Mobile controls */
+  .touch-controls{
+    display:none;margin-top:12px;
+    gap:8px;flex-wrap:wrap;justify-content:center;
+  }
+  .direction{
+    width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,0.02);display:grid;place-items:center;font-weight:700;
+    user-select:none;
+  }
+
+  /* Footer small */
+  footer{margin-top:6px;color:var(--muted);font-size:12px}
+
+  /* Responsive */
+  @media (max-width:980px){
+    .app{grid-template-columns: 1fr; padding:18px;}
+    .touch-controls{display:flex}
+  }
+</style>
+</head>
+<body>
+<div class="app" role="main">
+  <aside class="panel" aria-label="Controls and scoreboard">
+    <div class="brand">
+      <div class="logo">SD</div>
+      <div>
+        <h1>Snake Duel</h1>
+        <p class="lead">Play against a smart computer snake. Eat food, score points, win rounds.</p>
+      </div>
+    </div>
+
+    <div class="scoreboard" aria-live="polite">
+      <div class="score" title="Player score">
+        <div class="label">Player</div>
+        <div class="value" id="score-player">0</div>
+        <div class="muted">High: <span id="hs-player">0</span></div>
+      </div>
+      <div class="score" title="Computer score">
+        <div class="label">Computer</div>
+        <div class="value" id="score-computer">0</div>
+        <div class="muted">High: <span id="hs-comp">0</span></div>
+      </div>
+    </div>
+
+    <div class="controls" role="group" aria-label="Game controls">
+      <button class="btn primary" id="btn-start">Start</button>
+      <button class="btn ghost" id="btn-pause">Pause</button>
+      <button class="btn" id="btn-reset">Reset</button>
+    </div>
+
+    <div class="settings" aria-label="Game settings">
+      <label for="difficulty">Computer difficulty</label>
+      <select id="difficulty" aria-describedby="diff-desc">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+      </select>
+      <div id="diff-desc" class="muted" style="margin-top:8px">Higher difficulty -> smarter pathfinding and faster snake.</div>
+
+      <label style="margin-top:10px" for="speed">Game speed</label>
+      <input id="speed" type="range" min="6" max="18" value="10" />
+      <div class="muted">Adjust tick rate (higher = faster). Current: <span id="speedValue">10</span></div>
+
+      <label style="margin-top:10px">Round Mode</label>
+      <div class="muted">Each food eaten increments that snake's score. If player dies the round ends and restarts.</div>
+    </div>
+
+    <footer>
+      <div style="margin-top:8px">Controls: Arrow keys or WASD. Tap on-screen arrows on mobile.</div>
+    </footer>
+  </aside>
+
+  <section class="stage">
+    <div class="canvas-wrap" role="application" aria-label="Snake game area">
+      <canvas id="gameCanvas" width="720" height="480" aria-label="Game canvas"></canvas>
+      <div class="hud" role="status">
+        <div class="stat" id="roundStatus">Ready</div>
+        <div class="stat" id="foodCounter">Food eaten: 0</div>
+      </div>
+
+      <div class="touch-controls" aria-hidden="false">
+        <div style="display:flex;gap:8px;">
+          <div class="direction" data-dir="up">↑</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="direction" data-dir="left">←</div>
+          <div class="direction" data-dir="down">↓</div>
+          <div class="direction" data-dir="right">→</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;justify-content:center;width:100%;">
+      <div class="muted">Tip: The computer uses safe pathfinding but can be tricked into traps.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+/*
+  Snake Duel - single-file JS
+  Features:
+   - Player snake controlled by keyboard/touch
+   - Computer snake uses BFS pathfinding (difficulty affects speed/lookahead)
+   - Scores per snake that persist as highs in localStorage
+   - Single-file, responsive, accessible-ish
+*/
+
+(() => {
+  // Canvas & rendering setup
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const WIDTH = canvas.width;
+  const HEIGHT = canvas.height;
+
+  // Grid configuration
+  const CELL_SIZE = 16;
+  const COLS = Math.floor(WIDTH / CELL_SIZE);
+  const ROWS = Math.floor(HEIGHT / CELL_SIZE);
+
+  // DOM elements
+  const btnStart = document.getElementById('btn-start');
+  const btnPause = document.getElementById('btn-pause');
+  const btnReset = document.getElementById('btn-reset');
+  const difficultyEl = document.getElementById('difficulty');
+  const speedEl = document.getElementById('speed');
+  const speedValue = document.getElementById('speedValue');
+  const scorePlayerEl = document.getElementById('score-player');
+  const scoreCompEl = document.getElementById('score-computer');
+  const hsPlayerEl = document.getElementById('hs-player');
+  const hsCompEl = document.getElementById('hs-comp');
+  const roundStatusEl = document.getElementById('roundStatus');
+  const foodCounterEl = document.getElementById('foodCounter');
+  const touchDirs = document.querySelectorAll('.direction');
+
+  // Game state
+  let gameInterval = null;
+  let tickRate = parseInt(speedEl.value, 10); // ticks per second
+  let isRunning = false;
+  let round = 0;
+  let foodEatenThisRound = 0;
+
+  // Scores & storage
+  let score = { player: 0, comp: 0 };
+  const HS_KEY = 'snake_duel_highscores_v1';
+  let highs = { player: 0, comp: 0 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(HS_KEY));
+    if (saved) highs = saved;
+  } catch(e){ /* ignore */ }
+  hsPlayerEl.textContent = highs.player;
+  hsCompEl.textContent = highs.comp;
+
+  // Utility helpers
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  // Directions
+  const DIRS = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 }
+  };
+
+  // Entities
+  class Snake {
+    constructor({ x, y, color='#10b981', initialLen=5, dir='right', isPlayer=false }) {
+      this.color = color;
+      this.isPlayer = isPlayer;
+      this.reset(x,y,initialLen,dir);
+    }
+    reset(x,y,len,dir){
+      this.dir = dir;
+      this.nextDir = dir;
+      this.body = [];
+      for (let i=0;i<len;i++){
+        this.body.push({ x: x - i, y });
+      }
+      this.growBy = 0;
+      this.alive = true;
+      this.score = 0;
+    }
+    head(){ return this.body[0]; }
+    occupies(x,y){
+      return this.body.some(p => p.x===x && p.y===y);
+    }
+    setDirection(dir){
+      // Prevent reversing
+      const opposite = (a,b) => (a.x + b.x === 0 && a.y + b.y === 0);
+      const newDir = DIRS[dir];
+      if (!newDir) return;
+      if (!opposite(newDir, DIRS[this.dir])) {
+        this.nextDir = dir;
+      }
+    }
+    step(){
+      if (!this.alive) return;
+      this.dir = this.nextDir;
+      const d = DIRS[this.dir];
+      const newHead = { x: this.head().x + d.x, y: this.head().y + d.y };
+      this.body.unshift(newHead);
+      if (this.growBy > 0) {
+        this.growBy--;
+      } else {
+        this.body.pop();
+      }
+    }
+    grow(n=1){ this.growBy += n; this.score += n; }
+  }
+
+  // Initialize snakes & food
+  let player, comp, food;
+
+  function placeFood(avoidFn) {
+    // place food on a free cell not occupied by snakes.
+    for (let attempts=0; attempts<1000; attempts++){
+      const fx = randInt(1, COLS-2);
+      const fy = randInt(1, ROWS-2);
+      if (avoidFn && avoidFn(fx,fy)) continue;
+      food = { x: fx, y: fy };
+      return;
+    }
+    // fallback: scan for free cell
+    for (let y=1;y<ROWS-1;y++){
+      for (let x=1;x<COLS-1;x++){
+        if (!player.occupies(x,y) && !comp.occupies(x,y)){
+          food = { x, y };
+          return;
+        }
+      }
+    }
+  }
+
+  function resetRound() {
+    // center player on left, comp on right
+    const pStart = { x: Math.max(4, Math.floor(COLS*0.25)), y: Math.floor(ROWS/2) };
+    const cStart = { x: Math.min(COLS-5, Math.floor(COLS*0.75)), y: Math.floor(ROWS/2) };
+    player.reset(pStart.x, pStart.y, 5, 'right');
+    comp.reset(cStart.x, cStart.y, 5, 'left');
+    // place food avoiding immediate collisions
+    placeFood((x,y) => player.occupies(x,y) || comp.occupies(x,y));
+    foodEatenThisRound = 0;
+    round += 1;
+    roundStatusEl.textContent = `Round ${round} — Go!`;
+    foodCounterEl.textContent = `Food eaten: ${foodEatenThisRound}`;
+  }
+
+  // AI: BFS shortest path to food avoiding obstacles (bodies & walls).
+  // Difficulty influences how often AI recalculates and its speed.
+  function computePathBFS(start, goal, obstacles, maxNodes=10000) {
+    // obstacles is a function (x,y) => boolean
+    const key = (p) => `${p.x},${p.y}`;
+    const q = [];
+    const seen = new Set();
+    const parent = new Map();
+    q.push(start);
+    seen.add(key(start));
+    let nodes = 0;
+    while (q.length && nodes++ < maxNodes) {
+      const cur = q.shift();
+      if (cur.x === goal.x && cur.y === goal.y) {
+        // reconstruct path
+        const path = [];
+        let p = cur;
+        while (key(p) !== key(start)) {
+          path.push(p);
+          p = parent.get(key(p));
+        }
+        path.reverse();
+        return path; // array of positions from next step to goal
+      }
+      for (const d of Object.values(DIRS)) {
+        const nx = cur.x + d.x, ny = cur.y + d.y;
+        if (nx < 1 || nx >= COLS-1 || ny < 1 || ny >= ROWS-1) continue; // avoid border
+        if (seen.has(`${nx},${ny}`)) continue;
+        if (obstacles(nx,ny)) continue;
+        seen.add(`${nx},${ny}`);
+        parent.set(`${nx},${ny}`, cur);
+        q.push({ x:nx, y:ny });
+      }
+    }
+    return null; // no path
+  }
+
+  // Game loop tick
+  let lastTimestamp = 0;
+  let accumulator = 0;
+  function gameTick(deltaMs) {
+    if (!isRunning) return;
+    // accumulate time to match tickRate
+    accumulator += deltaMs;
+    const msPerTick = 1000 / tickRate;
+    while (accumulator >= msPerTick) {
+      // AI decision
+      aiDecide();
+
+      // move snakes
+      player.step();
+      comp.step();
+
+      // collisions & checks
+      handleCollisions();
+
+      accumulator -= msPerTick;
+    }
+    render();
+  }
+
+  function isCollisionWithWalls(snake) {
+    const h = snake.head();
+    return h.x < 0 || h.x >= COLS || h.y < 0 || h.y >= ROWS;
+  }
+
+  function isCollisionWithSelf(snake) {
+    const h = snake.head();
+    return snake.body.slice(1).some(p => p.x === h.x && p.y === h.y);
+  }
+
+  function isCollisionWithOther(snakeA, snakeB) {
+    const h = snakeA.head();
+    return snakeB.body.some(p => p.x === h.x && p.y === h.y);
+  }
+
+  function handleCollisions() {
+    // Check if player ate food
+    if (player.head().x === food.x && player.head().y === food.y) {
+      player.grow(1);
+      score.player += 1;
+      foodEatenThisRound += 1;
+      placeFood((x,y) => player.occupies(x,y) || comp.occupies(x,y));
+      foodCounterEl.textContent = `Food eaten: ${foodEatenThisRound}`;
+    }
+
+    // Check if comp ate food
+    if (comp.head().x === food.x && comp.head().y === food.y) {
+      comp.grow(1);
+      score.comp += 1;
+      foodEatenThisRound += 1;
+      placeFood((x,y) => player.occupies(x,y) || comp.occupies(x,y));
+      foodCounterEl.textContent = `Food eaten: ${foodEatenThisRound}`;
+    }
+
+    // Wall collisions (we used borders earlier, but double-check)
+    if (isCollisionWithWalls(player) || isCollisionWithSelf(player) || isCollisionWithOther(player, comp)) {
+      player.alive = false;
+    }
+    if (isCollisionWithWalls(comp) || isCollisionWithSelf(comp) || isCollisionWithOther(comp, player)) {
+      comp.alive = false;
+    }
+
+    // If player died => round over
+    if (!player.alive) {
+      endRound('player');
+    } else if (!comp.alive) {
+      // If comp died, reward player but keep round moving
+      endRound('comp');
+    }
+
+    // update score displays
+    scorePlayerEl.textContent = score.player;
+    scoreCompEl.textContent = score.comp;
+    // update highs if needed
+    if (score.player > highs.player) highs.player = score.player;
+    if (score.comp > highs.comp) highs.comp = score.comp;
+    hsPlayerEl.textContent = highs.player;
+    hsCompEl.textContent = highs.comp;
+    localStorage.setItem(HS_KEY, JSON.stringify(highs));
+  }
+
+  function endRound(whoDied) {
+    // whoDied = 'player' or 'comp'
+    isRunning = false;
+    clearAnimationLoop();
+    // Show message and quick reset for next round
+    roundStatusEl.textContent = whoDied === 'player' ? 'You lost this round' : 'Computer lost this round';
+    // If player died, decrement a small penalty? For now just pause and reset after a moment
+    setTimeout(() => {
+      // Reset both snakes but keep cumulative score
+      resetRound();
+      render();
+      // Auto resume
+      if (!isRunning) {
+        startGame();
+      }
+    }, 700); // short delay between rounds
+  }
+
+  // AI decision logic with difficulty
+  let aiPathCache = null;
+  let aiRecalcCounter = 0;
+  function aiDecide() {
+    const diff = difficultyEl.value;
+    const recalcFreq = diff === 'hard' ? 1 : diff === 'normal' ? 2 : 4; // ticks between recalcs
+    const maxNodes = diff === 'hard' ? 20000 : diff === 'normal' ? 8000 : 2000;
+    // Only recalc path occasionally for performance / "personality"
+    aiRecalcCounter = (aiRecalcCounter + 1) % recalcFreq;
+    if (!aiPathCache || aiRecalcCounter === 0) {
+      // build obstacle function: avoid walls and both snakes' bodies except the last tail (which will move)
+      const obstacles = (x,y) => {
+        // borders
+        if (x < 1 || x >= COLS-1 || y < 1 || y >= ROWS-1) return true;
+        // avoid player's body
+        if (player.occupies(x,y)) return true;
+        // avoid comp's body except its tail (last segment), because it will move;
+        for (let i=0;i<comp.body.length-1;i++){
+          const p = comp.body[i];
+          if (p.x === x && p.y === y) return true;
+        }
+        return false;
+      };
+      const start = { x: comp.head().x, y: comp.head().y };
+      const goal = { x: food.x, y: food.y };
+      const path = computePathBFS(start, goal, obstacles, maxNodes);
+      aiPathCache = path || null;
+    }
+    // Follow path if available
+    if (aiPathCache && aiPathCache.length > 0) {
+      const next = aiPathCache[0];
+      // remove if it's identical to current head (stale)
+      if (next.x === comp.head().x && next.y === comp.head().y) {
+        aiPathCache.shift();
+        return;
+      }
+      // find direction
+      const dx = next.x - comp.head().x;
+      const dy = next.y - comp.head().y;
+      if (dx === 1) comp.setDirection('right');
+      else if (dx === -1) comp.setDirection('left');
+      else if (dy === 1) comp.setDirection('down');
+      else if (dy === -1) comp.setDirection('up');
+    } else {
+      // no path: try to move safely (avoid immediate collisions), otherwise random
+      const tries = ['up','down','left','right'];
+      // prefer current dir
+      tries.sort((a,b)=> (a===comp.dir? -1:0) - (b===comp.dir? -1:0));
+      for (const d of tries) {
+        const pos = { x: comp.head().x + DIRS[d].x, y: comp.head().y + DIRS[d].y };
+        if (pos.x < 1 || pos.x >= COLS-1 || pos.y < 1 || pos.y >= ROWS-1) continue;
+        // avoid player's body and comp's own body (except tail)
+        if (player.occupies(pos.x,pos.y)) continue;
+        if (comp.body.slice(0,comp.body.length-1).some(p => p.x===pos.x && p.y===pos.y)) continue;
+        comp.setDirection(d);
+        break;
+      }
+    }
+  }
+
+  // Render function
+  function render() {
+    // clear
+    ctx.fillStyle = '#061425';
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+    // draw grid subtle
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#0b2132';
+    ctx.lineWidth = 1;
+    for (let x=0;x<=COLS;x++){
+      ctx.beginPath();
+      ctx.moveTo(x*CELL_SIZE,0);
+      ctx.lineTo(x*CELL_SIZE, HEIGHT);
+      ctx.stroke();
+    }
+    for (let y=0;y<=ROWS;y++){
+      ctx.beginPath();
+      ctx.moveTo(0,y*CELL_SIZE);
+      ctx.lineTo(WIDTH, y*CELL_SIZE);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // draw food (glowy)
+    if (food) {
+      const fx = food.x * CELL_SIZE + CELL_SIZE/2;
+      const fy = food.y * CELL_SIZE + CELL_SIZE/2;
+      const r = CELL_SIZE*0.4;
+      // outer glow
+      const g = ctx.createRadialGradient(fx,fy,r*0.2, fx,fy,r);
+      g.addColorStop(0, 'rgba(255,200,60,0.95)');
+      g.addColorStop(1, 'rgba(255,200,60,0.05)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(fx,fy,r,0,Math.PI*2);
+      ctx.fill();
+      // core
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.arc(fx,fy,r*0.45,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    // draw snakes: draw tail shadow first for depth
+    function drawSnake(snake, options={}) {
+      const base = options.baseColor || snake.color;
+      for (let i = snake.body.length - 1; i >= 0; i--) {
+        const p = snake.body[i];
+        const x = p.x * CELL_SIZE;
+        const y = p.y * CELL_SIZE;
+        const t = i / snake.body.length;
+        // tail fades out
+        ctx.fillStyle = hexToRgba(base, 0.45 + 0.5*(1-t));
+        ctx.fillRect(x+1, y+1, CELL_SIZE-2, CELL_SIZE-2);
+      }
+      // head with slight accent
+      const h = snake.head();
+      const hx = h.x * CELL_SIZE;
+      const hy = h.y * CELL_SIZE;
+      // head gradient
+      const g = ctx.createLinearGradient(hx, hy, hx+CELL_SIZE, hy+CELL_SIZE);
+      g.addColorStop(0, base);
+      g.addColorStop(1, shadeColor(base, -18));
+      ctx.fillStyle = g;
+      ctx.fillRect(hx+1, hy+1, CELL_SIZE-2, CELL_SIZE-2);
+    }
+
+    drawSnake(comp, { baseColor: '#ef4444' });
+    drawSnake(player, { baseColor: '#22c55e' });
+
+    // borders
+    ctx.strokeStyle = '#082033';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1,1, COLS*CELL_SIZE-2, ROWS*CELL_SIZE-2);
+  }
+
+  // Color helpers
+  function hexToRgba(hex, alpha=1){
+    const c = hex.replace('#','');
+    const bigint = parseInt(c, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  function shadeColor(hex, percent) {
+    // percent -100..100
+    const c = hex.replace('#','');
+    const num = parseInt(c,16);
+    const r = Math.min(255, Math.max(0, ((num >> 16) & 0xFF) + Math.round(255 * percent / 100)));
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0xFF) + Math.round(255 * percent / 100)));
+    const b = Math.min(255, Math.max(0, (num & 0xFF) + Math.round(255 * percent / 100)));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // Input handlers
+  const keyMap = {
+    'ArrowUp':'up','ArrowDown':'down','ArrowLeft':'left','ArrowRight':'right',
+    'w':'up','s':'down','a':'left','d':'right',
+    'W':'up','S':'down','A':'left','D':'right'
+  };
+  window.addEventListener('keydown', (e) => {
+    const mapping = keyMap[e.key];
+    if (mapping) {
+      player.setDirection(mapping);
+      e.preventDefault();
+    } else if (e.key === ' '){
+      // space toggles pause
+      togglePause();
+      e.preventDefault();
+    }
+  });
+
+  // Touch controls
+  touchDirs.forEach(btn => {
+    btn.addEventListener('touchstart', (ev) => {
+      const d = btn.dataset.dir;
+      player.setDirection(d);
+      ev.preventDefault();
+    });
+    btn.addEventListener('mousedown', (ev) => {
+      const d = btn.dataset.dir;
+      player.setDirection(d);
+      ev.preventDefault();
+    });
+  });
+
+  // Start / Pause / Reset
+  function startGame() {
+    if (isRunning) return;
+    isRunning = true;
+    btnStart.textContent = 'Running';
+    btnStart.classList.remove('primary'); btnStart.classList.add('ghost');
+    btnPause.disabled = false;
+    lastTimestamp = performance.now();
+    animationLoop(lastTimestamp);
+  }
+  function pauseGame() {
+    isRunning = false;
+    clearAnimationLoop();
+    btnStart.textContent = 'Start';
+    btnStart.classList.add('primary'); btnStart.classList.remove('ghost');
+    roundStatusEl.textContent = 'Paused';
+  }
+  function togglePause() {
+    isRunning ? pauseGame() : startGame();
+  }
+
+  function resetGame(full=false) {
+    // reset scores if full
+    if (full) {
+      score.player = 0;
+      score.comp = 0;
+      highs = { player: 0, comp: 0 };
+      localStorage.setItem(HS_KEY, JSON.stringify(highs));
+      hsPlayerEl.textContent = highs.player;
+      hsCompEl.textContent = highs.comp;
+    }
+    scorePlayerEl.textContent = score.player;
+    scoreCompEl.textContent = score.comp;
+    round = 0;
+    resetRound();
+    render();
+  }
+
+  btnStart.addEventListener('click', () => startGame());
+  btnPause.addEventListener('click', () => togglePause());
+  btnReset.addEventListener('click', () => {
+    resetGame(true);
+  });
+
+  speedEl.addEventListener('input', (e) => {
+    tickRate = parseInt(e.target.value,10);
+    speedValue.textContent = tickRate;
+  });
+
+  // Animation loop using requestAnimationFrame
+  let rafId = null;
+  function animationLoop(ts) {
+    rafId = requestAnimationFrame((now) => {
+      const delta = now - (lastTimestamp || now);
+      lastTimestamp = now;
+      gameTick(delta);
+      if (isRunning) animationLoop(now);
+    });
+  }
+  function clearAnimationLoop() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
+  // Initialize everything
+  function init() {
+    player = new Snake({ x: 4, y: Math.floor(ROWS/2), color:'#22c55e', isPlayer:true });
+    comp = new Snake({ x: COLS-5, y: Math.floor(ROWS/2), color:'#ef4444', dir:'left' });
+    resetGame(false);
+    render();
+    // Keep UI tickRate in sync
+    tickRate = parseInt(speedEl.value,10);
+    speedValue.textContent = tickRate;
+  }
+
+  // Responsive: scale canvas to fit container while preserving pixel perfect grid
+  function fitCanvas() {
+    // scale canvas element to container size while keeping integer scale to avoid blur
+    const parent = canvas.parentElement;
+    const maxW = Math.min(parent.clientWidth - 40, WIDTH);
+    const maxH = window.innerHeight - 220;
+    const scale = Math.min(maxW / WIDTH, maxH / HEIGHT, 1);
+    canvas.style.width = Math.floor(WIDTH * scale) + 'px';
+    canvas.style.height = Math.floor(HEIGHT * scale) + 'px';
+  }
+  window.addEventListener('resize', fitCanvas);
+
+  // Start up
+  init();
+  fitCanvas();
+
+  // Export a minimal API for debugging (optional)
+  window.SnakeDuel = {
+    start: startGame,
+    pause: pauseGame,
+    reset: () => resetGame(true),
+    score,
+    highs
+  };
+
+})();
+</script>
+</body>
+</html>
+, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+</body>
+</html>

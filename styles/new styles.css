@@ -1,0 +1,26 @@
+
+body{
+    background-color:rgb(154, 213, 230)
+}
+h1{
+    color:black;
+    text-align:center;
+    font-size:72px;
+    font-weight: bold;
+}
+h2{
+    color:rgb(109, 72, 168);
+    text-align: center;
+    font-size:60px;
+    text-decoration: underline;
+}
+p{
+    color:black
+}
+h3{
+    color:rgb(83, 48, 4)
+
+}
+li{
+    font-family:Verdana, Geneva, Tahoma, sans-serif
+}
