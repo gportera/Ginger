@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ballerina Jump Game</title>
+<div id="instructions" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:22px;text-align:center;padding:20px;">
+    <p>Press SPACE to jump.</p>
+    <p>Avoid the shoes—if you touch one, the game ends.</p>
+    <p>Stay alive as long as possible to increase your score!</p>
+    <button id="startBtn" style="padding:10px 20px;font-size:20px;border:none;border-radius:8px;background:#ff99cc;color:white;cursor:pointer;">Start Game</button>
+  </div>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #f7e9f5;
+    font-family: Arial, sans-serif;
+  }
+  #gameArea {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(#f7e9f5, #fcecff);
+  }
+  #ballerina, #shoe {
+    position: absolute;
+    bottom: 0;
+  }
+  #ballerina {
+    width: 90px;
+    height: 120px;
+    background: pink;
+    border-radius: 40px;
+    left: 50px;
+    transition: bottom 0.2s;
+  }
+  #shoe {
+    width: 70px;
+    height: 40px;
+    background: brown;
+    right: -100px;
+  }
+
+  #score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  #restartBtn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 12px 25px;
+    background: #ff66a3;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: none;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<div id="gameArea">
+  <div id="score">Score: 0</div>
+  <div id="ballerina"></div>
+  <div id="shoe"></div>
+  <button id="restartBtn">Restart</button>
+</div>
+
+<script>
+  const ballerina = document.getElementById("ballerina");
+  const shoe = document.getElementById("shoe");
+  const scoreDisplay = document.getElementById("score");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let isJumping = false;
+  let score = 0;
+  let gameOver = false;
+
+  function jump() {
+    if (isJumping) return;
+    isJumping = true;
+
+    ballerina.style.bottom = "140px";
+    setTimeout(() => {
+      ballerina.style.bottom = "0px";
+      setTimeout(() => (isJumping = false), 200);
+    }, 400);
+  }
+
+  function moveShoe() {
+    let shoePos = window.innerWidth;
+
+    const interval = setInterval(() => {
+      if (gameOver) {
+        clearInterval(interval);
+        return;
+      }
+
+      shoePos -= 10;
+      shoe.style.right = (window.innerWidth - shoePos) + "px";
+
+      // Collision detection
+      const ballerinaBottom = parseInt(window.getComputedStyle(ballerina).bottom);
+      if (shoePos < 140 && shoePos > 50 && ballerinaBottom < 40) {
+        endGame();
+        clearInterval(interval);
+      }
+
+      // Score increase
+      if (shoePos < -50) {
+        score++;
+        scoreDisplay.innerText = "Score: " + score;
+        shoePos = window.innerWidth;
+      }
+    }, 30);
+  }
+
+  function endGame() {
+    gameOver = true;
+    restartBtn.style.display = "block";
+  }
+
+  restartBtn.addEventListener("click", () => {
+    score = 0;
+    scoreDisplay.innerText = "Score: 0";
+    shoe.style.right = "-100px";
+    gameOver = false;
+    restartBtn.style.display = "none";
+    moveShoe();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && !gameOver) {
+      jump();
+    }
+  });
+
+  moveShoe();
+</script>
+</body>
+</html>
+
+
+
