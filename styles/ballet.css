@@ -61,3 +61,14 @@ a:hover {
     margin: 0 auto;
     border-radius: 10px;
 }
+.play-link {
+  font-size: 22px;
+  color: #ff66a3;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.play-link:hover {
+  text-decoration: underline;
+  color: #ff2a7a;
+}

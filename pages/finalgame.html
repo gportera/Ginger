@@ -4,12 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Ballerina Jump Game</title>
-<div id="instructions" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:22px;text-align:center;padding:20px;">
-    <p>Press SPACE to jump.</p>
-    <p>Avoid the shoes—if you touch one, the game ends.</p>
-    <p>Stay alive as long as possible to increase your score!</p>
-    <button id="startBtn" style="padding:10px 20px;font-size:20px;border:none;border-radius:8px;background:#ff99cc;color:white;cursor:pointer;">Start Game</button>
-  </div>
+
 <style>
   body {
     margin: 0;
@@ -37,8 +32,8 @@
     transition: bottom 0.2s;
   }
   #shoe {
-    width: 70px;
-    height: 40px;
+    width: 50px;
+    height: 20px;
     background: brown;
     right: -100px;
   }
@@ -65,9 +60,49 @@
     display: none;
     border-radius: 8px;
   }
+
+  /* INSTRUCTIONS OVERLAY */
+  #instructions {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    text-align: center;
+    padding: 20px;
+    z-index: 10;
+  }
+
+  #startBtn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 20px;
+    border: none;
+    border-radius: 8px;
+    background: #ff99cc;
+    color: white;
+    cursor: pointer;
+  }
 </style>
 </head>
+
 <body>
+
+<!-- Instructions Overlay (now in the correct place) -->
+<div id="instructions">
+  <p>Press <strong>SPACE</strong> to jump.</p>
+  <p>Avoid the moving block—if you touch one, the game ends.</p>
+  <p>Stay alive as long as possible to increase your score!</p>
+  <button id="startBtn">Start Game</button>
+</div>
+
 <div id="gameArea">
   <div id="score">Score: 0</div>
   <div id="ballerina"></div>
@@ -80,10 +115,16 @@
   const shoe = document.getElementById("shoe");
   const scoreDisplay = document.getElementById("score");
   const restartBtn = document.getElementById("restartBtn");
+  const instructions = document.getElementById("instructions");
+  const startBtn = document.getElementById("startBtn");
 
   let isJumping = false;
   let score = 0;
   let gameOver = false;
+
+  startBtn.addEventListener("click", () => {
+    instructions.style.display = "none";
+  });
 
   function jump() {
     if (isJumping) return;
@@ -146,8 +187,10 @@
 
   moveShoe();
 </script>
+
 </body>
 </html>
+
 
 
 
